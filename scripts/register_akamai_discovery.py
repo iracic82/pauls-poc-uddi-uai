@@ -35,7 +35,7 @@ view_name = f"Akamai_EdgeDNS_{PARTICIPANT_ID}"
 payload = {
     "name": provider_name,
     "provider_type": "Akamai",
-    "account_preference": "single",
+    "account_preference": "auto_discover_multiple",
     "sync_interval": "Auto",
     "desired_state": "enabled",
     "credential_preference": {
