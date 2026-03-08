@@ -46,7 +46,7 @@ payload = {
     "credential_preference": {
         "credential_type": "static"
     },
-    "destination_types_enabled": ["DNS", "IPAM"],
+    "destination_types_enabled": ["DNS"],
     "source_configs": [
         {
             "cloud_credential_id": CLOUD_CREDENTIAL_ID,
@@ -59,7 +59,7 @@ payload = {
     "additional_config": {
         "excluded_accounts": [],
         "forward_zone_enabled": False,
-        "internal_ranges_enabled": True,
+        "internal_ranges_enabled": False,
         "object_type": {
             "version": 1,
             "discover_new": True,
@@ -120,15 +120,6 @@ payload = {
                     "view_name": view_name,
                     "sync_type": "read_write",
                     "resolver_endpoints_sync_enabled": False
-                }
-            }
-        },
-        {
-            "destination_type": "IPAM",
-            "config": {
-                "ipam": {
-                    "ip_space": "",
-                    "dhcp_server": ""
                 }
             }
         }
