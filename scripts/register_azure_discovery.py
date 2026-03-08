@@ -4,7 +4,7 @@ Register Azure cloud discovery provider in Infoblox CSP.
 Discovers Azure VNets/subnets/VMs into UDDI via UAI.
 
 Required env vars: TF_VAR_ddi_api_key, INSTRUQT_AZURE_SUBSCRIPTION_INFOBLOX_TENANT_SUBSCRIPTION_ID, INSTRUQT_PARTICIPANT_ID
-Required file: azure_cloud_credential_id (created by get_azure_credential_id.py)
+Required file: azure_cloud_credential_id (created by create_azure_credential.py)
 """
 
 import os
@@ -12,7 +12,9 @@ import json
 import requests
 
 # === Configuration ===
-API_URL = "https://csp.infoblox.com/api/cloud_discovery/v2/providers"
+BASE_URL = "https://csp.infoblox.com"
+PROVIDERS_URL = f"{BASE_URL}/api/cloud_discovery/v2/providers"
+REALMS_URL = f"{BASE_URL}/api/ddi/v1/federation/federated_realm"
 TOKEN = os.environ.get("TF_VAR_ddi_api_key")
 RESTRICTED_ACCOUNT_ID = os.environ.get("INSTRUQT_AZURE_SUBSCRIPTION_INFOBLOX_TENANT_SUBSCRIPTION_ID")
 PARTICIPANT_ID = os.environ.get("INSTRUQT_PARTICIPANT_ID")
@@ -26,11 +28,36 @@ if not RESTRICTED_ACCOUNT_ID:
 if not PARTICIPANT_ID:
     raise EnvironmentError("INSTRUQT_PARTICIPANT_ID environment variable is not set.")
 if not os.path.exists(CLOUD_CREDENTIAL_FILE):
-    raise FileNotFoundError(f"Credential ID file '{CLOUD_CREDENTIAL_FILE}' not found. Run get_azure_credential_id.py first.")
+    raise FileNotFoundError(f"Credential ID file '{CLOUD_CREDENTIAL_FILE}' not found. Run create_azure_credential.py first.")
 
 # === Load cloud_credential_id from file ===
 with open(CLOUD_CREDENTIAL_FILE, "r") as f:
     CLOUD_CREDENTIAL_ID = f.read().strip()
+
+# === HTTP Headers ===
+headers = {
+    "Authorization": f"Token {TOKEN}",
+    "Content-Type": "application/json"
+}
+
+# === Fetch default federated realm ===
+print("Fetching default federated realm...")
+realm_response = requests.get(REALMS_URL, headers=headers)
+realm_data = realm_response.json()
+print(f"Realms Status Code: {realm_response.status_code}")
+
+federated_realms = []
+results = realm_data.get("results", [])
+if results:
+    default_realm = results[0]
+    realm_id = default_realm.get("id")
+    if realm_id:
+        federated_realms = [realm_id]
+        print(f"Using federated realm: {realm_id}")
+    else:
+        print("WARNING: No realm ID found, proceeding without federated realm.")
+else:
+    print("WARNING: No federated realms found, proceeding without.")
 
 # === Dynamic names ===
 provider_name = f"Azure_Demo_Lab_{PARTICIPANT_ID}"
@@ -46,7 +73,7 @@ payload = {
     "credential_preference": {
         "credential_type": "static"
     },
-    "destination_types_enabled": ["DNS"],
+    "destination_types_enabled": ["DNS", "IPAM/DHCP"],
     "source_configs": [
         {
             "cloud_credential_id": CLOUD_CREDENTIAL_ID,
@@ -60,6 +87,7 @@ payload = {
         "excluded_accounts": [],
         "forward_zone_enabled": False,
         "internal_ranges_enabled": False,
+        "federated_realms": federated_realms,
         "object_type": {
             "version": 1,
             "discover_new": True,
@@ -122,20 +150,20 @@ payload = {
                     "resolver_endpoints_sync_enabled": False
                 }
             }
+        },
+        {
+            "destination_type": "IPAM/DHCP",
+            "config": {
+                "ipam": {}
+            }
         }
     ]
-}
-
-# === HTTP Headers ===
-headers = {
-    "Authorization": f"Token {TOKEN}",
-    "Content-Type": "application/json"
 }
 
 # === Make the POST request ===
 print(f"Registering Azure cloud provider '{provider_name}' with view '{view_name}'...")
 
-response = requests.post(API_URL, headers=headers, data=json.dumps(payload))
+response = requests.post(PROVIDERS_URL, headers=headers, data=json.dumps(payload))
 
 try:
     response_data = response.json()
@@ -151,5 +179,4 @@ if response.status_code == 201:
 elif response.status_code == 409:
     print("Provider already exists (409 Conflict).")
 else:
-    print(f"Failed to register Azure cloud provider.")
-    print(json.dumps(response_data, indent=2))
+    print("Failed to register Azure cloud provider.")
