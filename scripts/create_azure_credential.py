@@ -3,7 +3,7 @@
 Create Azure cloud credential in Infoblox CSP using Instruqt Azure SPN details.
 Saves the credential ID to file for use by register_azure_discovery.py.
 
-Required env vars: Infoblox_Token, INSTRUQT_PARTICIPANT_ID,
+Required env vars: TF_VAR_ddi_api_key, INSTRUQT_PARTICIPANT_ID,
   INSTRUQT_AZURE_SUBSCRIPTION_INFOBLOX_TENANT_TENANT_ID,
   INSTRUQT_AZURE_SUBSCRIPTION_INFOBLOX_TENANT_SPN_ID,
   INSTRUQT_AZURE_SUBSCRIPTION_INFOBLOX_TENANT_SPN_PASSWORD
@@ -16,7 +16,7 @@ import requests
 
 # === Config ===
 API_URL = "https://csp.infoblox.com/api/iam/v2/keys"
-TOKEN = os.environ.get("Infoblox_Token")
+TOKEN = os.environ.get("TF_VAR_ddi_api_key")
 OUTPUT_FILE = "azure_cloud_credential_id"
 
 TENANT_ID = os.environ.get("INSTRUQT_AZURE_SUBSCRIPTION_INFOBLOX_TENANT_TENANT_ID")
@@ -26,7 +26,7 @@ PARTICIPANT_ID = os.environ.get("INSTRUQT_PARTICIPANT_ID")
 
 # === Validation ===
 if not TOKEN:
-    raise EnvironmentError("Infoblox_Token environment variable is not set.")
+    raise EnvironmentError("TF_VAR_ddi_api_key environment variable is not set.")
 if not TENANT_ID or not CLIENT_ID or not CLIENT_SECRET:
     raise EnvironmentError("Azure environment variables are not fully set.")
 if not PARTICIPANT_ID:
@@ -66,6 +66,8 @@ except Exception:
     response_data = {"raw": response.text}
 
 print(f"Status Code: {response.status_code}")
+print("Full API Response:")
+print(json.dumps(response_data, indent=2))
 
 # === Handle response and extract ID ===
 if response.status_code in [200, 201]:

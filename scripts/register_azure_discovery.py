@@ -3,7 +3,7 @@
 Register Azure cloud discovery provider in Infoblox CSP.
 Discovers Azure VNets/subnets/VMs into UDDI via UAI.
 
-Required env vars: Infoblox_Token, INSTRUQT_AZURE_SUBSCRIPTION_INFOBLOX_TENANT_SUBSCRIPTION_ID, INSTRUQT_PARTICIPANT_ID
+Required env vars: TF_VAR_ddi_api_key, INSTRUQT_AZURE_SUBSCRIPTION_INFOBLOX_TENANT_SUBSCRIPTION_ID, INSTRUQT_PARTICIPANT_ID
 Required file: azure_cloud_credential_id (created by get_azure_credential_id.py)
 """
 
@@ -13,14 +13,14 @@ import requests
 
 # === Configuration ===
 API_URL = "https://csp.infoblox.com/api/cloud_discovery/v2/providers"
-TOKEN = os.environ.get("Infoblox_Token")
+TOKEN = os.environ.get("TF_VAR_ddi_api_key")
 RESTRICTED_ACCOUNT_ID = os.environ.get("INSTRUQT_AZURE_SUBSCRIPTION_INFOBLOX_TENANT_SUBSCRIPTION_ID")
 PARTICIPANT_ID = os.environ.get("INSTRUQT_PARTICIPANT_ID")
 CLOUD_CREDENTIAL_FILE = "azure_cloud_credential_id"
 
 # === Validation ===
 if not TOKEN:
-    raise EnvironmentError("Infoblox_Token environment variable is not set.")
+    raise EnvironmentError("TF_VAR_ddi_api_key environment variable is not set.")
 if not RESTRICTED_ACCOUNT_ID:
     raise EnvironmentError("INSTRUQT_AZURE_SUBSCRIPTION_INFOBLOX_TENANT_SUBSCRIPTION_ID is not set.")
 if not PARTICIPANT_ID:
@@ -152,6 +152,8 @@ except Exception:
     response_data = {"raw": response.text}
 
 print(f"Status Code: {response.status_code}")
+print("Response:")
+print(json.dumps(response_data, indent=2))
 
 if response.status_code == 201:
     print("Azure cloud provider registered successfully.")
