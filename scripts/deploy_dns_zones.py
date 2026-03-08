@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """
-Deploy DNS zones and records on both NIOS Grid Masters via WAPI.
+Deploy DNS zone and records on NIOS Grid Master via WAPI.
 
-GM1 ($GM_IP)  -> test.com  (zone + A, CNAME, MX, TXT records)
-GM2 ($GM2_IP) -> jag.com   (zone + A, CNAME, MX, TXT records)
+Paul's POC — Single GM with datacenter.local zone for on-prem 10.1.x.x hosts.
+UDDI manages 10.0.0.0/8. Azure 10.2/10.3 discovered by UAI separately.
 
-All config from environment variables — no CLI args, no interactive input.
-Required env vars: GM_IP, GM2_IP, TF_VAR_windows_admin_password
+Required env vars: GM_IP, TF_VAR_windows_admin_password
 """
 
 import os
@@ -22,12 +21,11 @@ USERNAME = "admin"
 # ---------------------------
 # Environment variables
 # ---------------------------
-gm1_ip = os.getenv("GM_IP")
-gm2_ip = os.getenv("GM2_IP")
+gm_ip = os.getenv("GM_IP")
 password = os.getenv("TF_VAR_windows_admin_password")
 
-if not gm1_ip or not gm2_ip:
-    print("ERROR: GM_IP and GM2_IP must be set")
+if not gm_ip:
+    print("ERROR: GM_IP must be set")
     sys.exit(1)
 
 if not password:
@@ -38,78 +36,43 @@ if not password:
 # Zone and record definitions
 # ---------------------------
 
-GM1_ZONE = "test.com"
-GM1_RECORDS = {
-    "record:a": [
-        {"name": "www.test.com", "ipv4addr": "10.10.1.10"},
-        {"name": "app.test.com", "ipv4addr": "10.10.1.20"},
-        {"name": "db.test.com", "ipv4addr": "10.10.1.30"},
-        {"name": "mail.test.com", "ipv4addr": "10.10.1.40"},
-        {"name": "dns1.test.com", "ipv4addr": "10.10.1.50"},
-        {"name": "dns2.test.com", "ipv4addr": "10.10.1.51"},
-        {"name": "ftp.test.com", "ipv4addr": "10.10.2.10"},
-        {"name": "ntp.test.com", "ipv4addr": "10.10.2.11"},
-        {"name": "ldap.test.com", "ipv4addr": "10.10.3.10"},
-        {"name": "radius.test.com", "ipv4addr": "10.10.3.20"},
-        {"name": "monitoring.test.com", "ipv4addr": "10.10.10.50"},
-        {"name": "logging.test.com", "ipv4addr": "10.10.10.51"},
-        {"name": "backup.test.com", "ipv4addr": "10.10.10.60"},
-        {"name": "proxy.test.com", "ipv4addr": "10.10.5.10"},
-        {"name": "waf.test.com", "ipv4addr": "10.10.5.20"},
-    ],
-    "record:cname": [
-        {"name": "web.test.com", "canonical": "www.test.com"},
-        {"name": "api.test.com", "canonical": "app.test.com"},
-        {"name": "smtp.test.com", "canonical": "mail.test.com"},
-        {"name": "imap.test.com", "canonical": "mail.test.com"},
-        {"name": "grafana.test.com", "canonical": "monitoring.test.com"},
-        {"name": "syslog.test.com", "canonical": "logging.test.com"},
-    ],
-    "record:mx": [
-        {"name": "test.com", "mail_exchanger": "mail.test.com", "preference": 10},
-    ],
-    "record:txt": [
-        {"name": "test.com", "text": "v=spf1 mx ip4:10.10.1.0/24 -all"},
-        {"name": "_dmarc.test.com", "text": "v=DMARC1; p=reject; rua=mailto:admin@test.com"},
-    ],
-}
+ZONE = "datacenter.local"
 
-GM2_ZONE = "jag.com"
-GM2_RECORDS = {
+RECORDS = {
     "record:a": [
-        {"name": "www.jag.com", "ipv4addr": "172.16.1.10"},
-        {"name": "portal.jag.com", "ipv4addr": "172.16.1.20"},
-        {"name": "mail.jag.com", "ipv4addr": "172.16.1.30"},
-        {"name": "vpn.jag.com", "ipv4addr": "172.16.1.40"},
-        {"name": "dns1.jag.com", "ipv4addr": "172.16.1.50"},
-        {"name": "dns2.jag.com", "ipv4addr": "172.16.1.51"},
-        {"name": "erp.jag.com", "ipv4addr": "172.16.2.10"},
-        {"name": "crm.jag.com", "ipv4addr": "172.16.2.20"},
-        {"name": "hr.jag.com", "ipv4addr": "172.16.2.30"},
-        {"name": "wiki.jag.com", "ipv4addr": "172.16.3.10"},
-        {"name": "git.jag.com", "ipv4addr": "172.16.3.20"},
-        {"name": "ci.jag.com", "ipv4addr": "172.16.3.30"},
-        {"name": "monitoring.jag.com", "ipv4addr": "172.16.10.50"},
-        {"name": "logging.jag.com", "ipv4addr": "172.16.10.51"},
-        {"name": "ntp.jag.com", "ipv4addr": "172.16.10.52"},
-        {"name": "proxy.jag.com", "ipv4addr": "172.16.5.10"},
-        {"name": "firewall.jag.com", "ipv4addr": "172.16.5.20"},
+        # Servers (10.1.1.0/24)
+        {"name": "www.datacenter.local", "ipv4addr": "10.1.1.10"},
+        {"name": "app.datacenter.local", "ipv4addr": "10.1.1.20"},
+        {"name": "db.datacenter.local", "ipv4addr": "10.1.1.30"},
+        {"name": "mail.datacenter.local", "ipv4addr": "10.1.1.40"},
+        {"name": "dns1.datacenter.local", "ipv4addr": "10.1.1.50"},
+        {"name": "dns2.datacenter.local", "ipv4addr": "10.1.1.51"},
+        # Infrastructure (10.1.2.0/24)
+        {"name": "ftp.datacenter.local", "ipv4addr": "10.1.2.10"},
+        {"name": "ntp.datacenter.local", "ipv4addr": "10.1.2.11"},
+        {"name": "syslog.datacenter.local", "ipv4addr": "10.1.2.12"},
+        # Auth (10.1.3.0/24)
+        {"name": "ldap.datacenter.local", "ipv4addr": "10.1.3.10"},
+        {"name": "radius.datacenter.local", "ipv4addr": "10.1.3.20"},
+        {"name": "ad.datacenter.local", "ipv4addr": "10.1.3.30"},
+        # DMZ (10.1.5.0/24)
+        {"name": "proxy.datacenter.local", "ipv4addr": "10.1.5.10"},
+        {"name": "waf.datacenter.local", "ipv4addr": "10.1.5.20"},
+        {"name": "lb.datacenter.local", "ipv4addr": "10.1.5.30"},
+        # Security (10.1.6.0/24)
+        {"name": "ids.datacenter.local", "ipv4addr": "10.1.6.10"},
+        {"name": "fw.datacenter.local", "ipv4addr": "10.1.6.20"},
+        # Management (10.1.10.0/24)
+        {"name": "switch-core.datacenter.local", "ipv4addr": "10.1.10.10"},
+        {"name": "monitoring.datacenter.local", "ipv4addr": "10.1.10.50"},
+        {"name": "logging.datacenter.local", "ipv4addr": "10.1.10.51"},
+        {"name": "backup.datacenter.local", "ipv4addr": "10.1.10.60"},
     ],
     "record:cname": [
-        {"name": "www2.jag.com", "canonical": "www.jag.com"},
-        {"name": "webmail.jag.com", "canonical": "mail.jag.com"},
-        {"name": "smtp.jag.com", "canonical": "mail.jag.com"},
-        {"name": "imap.jag.com", "canonical": "mail.jag.com"},
-        {"name": "grafana.jag.com", "canonical": "monitoring.jag.com"},
-        {"name": "syslog.jag.com", "canonical": "logging.jag.com"},
-        {"name": "jenkins.jag.com", "canonical": "ci.jag.com"},
-    ],
-    "record:mx": [
-        {"name": "jag.com", "mail_exchanger": "mail.jag.com", "preference": 10},
-    ],
-    "record:txt": [
-        {"name": "jag.com", "text": "v=spf1 mx ip4:172.16.1.0/24 -all"},
-        {"name": "_dmarc.jag.com", "text": "v=DMARC1; p=quarantine; rua=mailto:admin@jag.com"},
+        {"name": "web.datacenter.local", "canonical": "www.datacenter.local"},
+        {"name": "api.datacenter.local", "canonical": "app.datacenter.local"},
+        {"name": "smtp.datacenter.local", "canonical": "mail.datacenter.local"},
+        {"name": "grafana.datacenter.local", "canonical": "monitoring.datacenter.local"},
     ],
 }
 
@@ -151,24 +114,35 @@ def wapi_post(gm_ip, wapi, path, payload):
 
 
 # ---------------------------
-# Deploy logic
+# Main
 # ---------------------------
 
-def create_zone(gm_ip, wapi, fqdn):
-    r = wapi_post(gm_ip, wapi, "zone_auth", {"fqdn": fqdn})
+def main():
+    print(f"=== Deploy DNS Zone — Paul's POC ({ZONE}) ===")
+    print(f"\n{'='*50}")
+    print(f"  GM: {gm_ip} -> {ZONE}")
+    print(f"{'='*50}\n")
+
+    wapi = find_wapi_version(gm_ip)
+    if not wapi:
+        print("  Cannot connect to GM — skipping\n")
+        sys.exit(1)
+
+    # Create zone
+    print(f"  --- Zone ---")
+    r = wapi_post(gm_ip, wapi, "zone_auth", {"fqdn": ZONE})
     if r.status_code == 201:
-        log(f"Zone created: {fqdn}")
-        return True
+        log(f"Zone created: {ZONE}")
     elif r.status_code == 400 and "already exists" in r.text.lower():
-        log(f"Zone already exists: {fqdn}")
-        return True
+        log(f"Zone already exists: {ZONE}")
     else:
-        log(f"Zone {fqdn} — HTTP {r.status_code}: {r.text[:300]}", ok=False)
-        return False
+        log(f"Zone {ZONE} — HTTP {r.status_code}: {r.text[:300]}", ok=False)
+        print("  Skipping records — zone creation failed\n")
+        sys.exit(1)
 
-
-def create_records(gm_ip, wapi, records):
-    for record_type, entries in records.items():
+    # Create records
+    print(f"\n  --- Records ---")
+    for record_type, entries in RECORDS.items():
         for payload in entries:
             name = payload.get("name", "?")
             r = wapi_post(gm_ip, wapi, record_type, payload)
@@ -179,38 +153,7 @@ def create_records(gm_ip, wapi, records):
             else:
                 log(f"{record_type:15s} {name} — HTTP {r.status_code}: {r.text[:200]}", ok=False)
 
-
-def deploy_gm(label, gm_ip, zone, records):
-    print(f"\n{'='*50}")
-    print(f"  {label}: {gm_ip} -> {zone}")
-    print(f"{'='*50}\n")
-
-    wapi = find_wapi_version(gm_ip)
-    if not wapi:
-        print(f"  Skipping {label} — cannot connect\n")
-        return
-
-    print(f"\n  --- Zone ---")
-    if not create_zone(gm_ip, wapi, zone):
-        print(f"  Skipping records — zone creation failed\n")
-        return
-
-    print(f"\n  --- Records ---")
-    create_records(gm_ip, wapi, records)
-    print()
-
-
-# ---------------------------
-# Main
-# ---------------------------
-
-def main():
-    print("=== Deploy DNS Zones on NIOS Grid Masters ===")
-
-    deploy_gm("GM1", gm1_ip, GM1_ZONE, GM1_RECORDS)
-    deploy_gm("GM2", gm2_ip, GM2_ZONE, GM2_RECORDS)
-
-    print("=== DNS deployment complete ===")
+    print("\n=== DNS deployment complete ===")
 
 
 if __name__ == "__main__":
