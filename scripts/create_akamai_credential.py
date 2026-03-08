@@ -8,17 +8,19 @@ TOKEN = os.environ.get("TF_VAR_ddi_api_key")
 OUTPUT_FILE = "akamai_credential_id"
 PARTICIPANT_ID = os.environ.get("INSTRUQT_PARTICIPANT_ID")
 
-# Akamai credentials (static - shared across labs)
-AKAMAI_CLIENT_SECRET = os.environ.get("AKAMAI_CLIENT_SECRET", "lFxloAdyfVLSXJ2VPGc7buE5b2ocoQr17AVUn5ZOMWM=")
-AKAMAI_HOST = os.environ.get("AKAMAI_HOST", "akab-slb7hdjtgpuw3ohs-hrhbemhrqkvmvqaj.luna.akamaiapis.net")
-AKAMAI_ACCESS_TOKEN = os.environ.get("AKAMAI_ACCESS_TOKEN", "akab-djcjv3oppc3rfvdk-ankvvhn3hzfsnvnm")
-AKAMAI_CLIENT_TOKEN = os.environ.get("AKAMAI_CLIENT_TOKEN", "akab-r7cfkwvbicpcqjvh-xrez24zubj3jeo5e")
+# Akamai credentials (from Instruqt secrets)
+AKAMAI_CLIENT_SECRET = os.environ.get("AKAMAI_CLIENT_SECRET")
+AKAMAI_HOST = os.environ.get("AKAMAI_HOST")
+AKAMAI_ACCESS_TOKEN = os.environ.get("AKAMAI_ACCESS_TOKEN")
+AKAMAI_CLIENT_TOKEN = os.environ.get("AKAMAI_CLIENT_TOKEN")
 
 # === Validation ===
 if not TOKEN:
     raise EnvironmentError("TF_VAR_ddi_api_key environment variable is not set.")
 if not PARTICIPANT_ID:
     raise EnvironmentError("INSTRUQT_PARTICIPANT_ID environment variable is not set.")
+if not all([AKAMAI_CLIENT_SECRET, AKAMAI_HOST, AKAMAI_ACCESS_TOKEN, AKAMAI_CLIENT_TOKEN]):
+    raise EnvironmentError("Akamai credential environment variables are not fully set.")
 
 # === Construct Payload ===
 credential_name = f"Akamai-EdgeDNS-{PARTICIPANT_ID}"
