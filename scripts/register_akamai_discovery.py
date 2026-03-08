@@ -8,12 +8,15 @@ PROVIDERS_URL = f"{BASE_URL}/api/cloud_discovery/v2/providers"
 TOKEN = os.environ.get("TF_VAR_ddi_api_key")
 PARTICIPANT_ID = os.environ.get("INSTRUQT_PARTICIPANT_ID")
 AKAMAI_CREDENTIAL_FILE = "akamai_credential_id"
+AKAMAI_CONTRACT_ID = os.environ.get("AKAMAI_CONTRACT_ID")
 
 # === Validation ===
 if not TOKEN:
     raise EnvironmentError("TF_VAR_ddi_api_key environment variable is not set.")
 if not PARTICIPANT_ID:
     raise EnvironmentError("INSTRUQT_PARTICIPANT_ID environment variable is not set.")
+if not AKAMAI_CONTRACT_ID:
+    raise EnvironmentError("AKAMAI_CONTRACT_ID environment variable is not set.")
 if not os.path.exists(AKAMAI_CREDENTIAL_FILE):
     raise FileNotFoundError(f"Credential ID file '{AKAMAI_CREDENTIAL_FILE}' not found. Run create_akamai_credential.py first.")
 
@@ -35,24 +38,25 @@ view_name = f"Akamai_EdgeDNS_{PARTICIPANT_ID}"
 payload = {
     "name": provider_name,
     "provider_type": "Akamai",
-    "account_preference": "auto_discover_multiple",
+    "account_preference": "single",
     "sync_interval": "Auto",
     "desired_state": "enabled",
     "credential_preference": {
         "credential_type": "static"
     },
-    "destination_types_enabled": ["IPAM/DHCP", "DNS"],
+    "destination_types_enabled": ["DNS"],
     "source_configs": [
         {
             "cloud_credential_id": AKAMAI_CREDENTIAL_ID,
+            "restricted_to_accounts": [AKAMAI_CONTRACT_ID],
             "credential_config": {}
         }
     ],
     "additional_config": {
         "excluded_accounts": [],
         "forward_zone_enabled": False,
-        "federated_realms": [],
-        "provider_endpoint": ""
+        "internal_ranges_enabled": False,
+        "federated_realms": []
     },
     "destinations": [
         {
@@ -67,8 +71,10 @@ payload = {
             "destination_type": "DNS",
             "config": {
                 "dns": {
+                    "consolidated_zone_data_enabled": False,
                     "view_name": view_name,
                     "sync_type": "read_write",
+                    "resolver_endpoints_sync_enabled": False,
                     "zone_filters": [
                         {
                             "action": "exclude",
