@@ -36,12 +36,12 @@ payload = {
     "name": provider_name,
     "provider_type": "Akamai",
     "account_preference": "single",
-    "sync_interval": "15",
+    "sync_interval": "Auto",
     "desired_state": "enabled",
     "credential_preference": {
         "credential_type": "static"
     },
-    "destination_types_enabled": ["DNS"],
+    "destination_types_enabled": ["IPAM/DHCP", "DNS"],
     "source_configs": [
         {
             "cloud_credential_id": AKAMAI_CREDENTIAL_ID,
@@ -51,22 +51,24 @@ payload = {
     "additional_config": {
         "excluded_accounts": [],
         "forward_zone_enabled": False,
-        "internal_ranges_enabled": False,
-        "object_type": {
-            "version": 1,
-            "discover_new": True,
-            "objects": []
-        }
+        "federated_realms": [],
+        "provider_endpoint": ""
     },
     "destinations": [
+        {
+            "destination_type": "IPAM/DHCP",
+            "config": {
+                "ipam": {
+                    "disable_ipam_projection": True
+                }
+            }
+        },
         {
             "destination_type": "DNS",
             "config": {
                 "dns": {
-                    "consolidated_zone_data_enabled": False,
                     "view_name": view_name,
                     "sync_type": "read_write",
-                    "resolver_endpoints_sync_enabled": False,
                     "zone_filters": [
                         {
                             "action": "exclude",
