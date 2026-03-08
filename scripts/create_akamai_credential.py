@@ -36,7 +36,7 @@ payload = {
         "access_token": AKAMAI_ACCESS_TOKEN,
         "client_token": AKAMAI_CLIENT_TOKEN
     },
-    "key_type": "id_and_secret"
+    "key_type": "token_and_secret"
 }
 
 # === Headers ===
