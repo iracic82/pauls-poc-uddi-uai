@@ -251,7 +251,7 @@ resource "azurerm_linux_virtual_machine" "vnet1_web" {
   name                            = "vnet1-web-vm"
   location                        = azurerm_resource_group.main.location
   resource_group_name             = azurerm_resource_group.main.name
-  size                            = "Standard_B1s"
+  size                            = "Standard_D2as_v5"
   admin_username                  = var.admin_username
   disable_password_authentication = true
   network_interface_ids           = [azurerm_network_interface.vnet1_web.id]
