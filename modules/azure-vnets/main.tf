@@ -280,7 +280,7 @@ resource "azurerm_linux_virtual_machine" "vnet1_app" {
   name                            = "vnet1-app-vm"
   location                        = azurerm_resource_group.main.location
   resource_group_name             = azurerm_resource_group.main.name
-  size                            = "Standard_B1s"
+  size                            = "Standard_D2as_v5"
   admin_username                  = var.admin_username
   disable_password_authentication = true
   network_interface_ids           = [azurerm_network_interface.vnet1_app.id]
@@ -309,7 +309,7 @@ resource "azurerm_linux_virtual_machine" "vnet2_db" {
   name                            = "vnet2-db-vm"
   location                        = azurerm_resource_group.main.location
   resource_group_name             = azurerm_resource_group.main.name
-  size                            = "Standard_B1s"
+  size                            = "Standard_D2as_v5"
   admin_username                  = var.admin_username
   disable_password_authentication = true
   network_interface_ids           = [azurerm_network_interface.vnet2_db.id]
@@ -338,7 +338,7 @@ resource "azurerm_linux_virtual_machine" "vnet2_mgmt" {
   name                            = "vnet2-mgmt-vm"
   location                        = azurerm_resource_group.main.location
   resource_group_name             = azurerm_resource_group.main.name
-  size                            = "Standard_B1s"
+  size                            = "Standard_D2as_v5"
   admin_username                  = var.admin_username
   disable_password_authentication = true
   network_interface_ids           = [azurerm_network_interface.vnet2_mgmt.id]
