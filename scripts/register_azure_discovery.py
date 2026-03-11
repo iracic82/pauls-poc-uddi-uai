@@ -78,9 +78,7 @@ payload = {
         {
             "cloud_credential_id": CLOUD_CREDENTIAL_ID,
             "restricted_to_accounts": [RESTRICTED_ACCOUNT_ID],
-            "credential_config": {
-                "access_identifier": ""
-            }
+            "credential_config": {}
         }
     ],
     "additional_config": {
