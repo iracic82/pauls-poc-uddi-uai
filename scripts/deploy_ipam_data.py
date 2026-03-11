@@ -3,7 +3,7 @@
 Deploy IPAM data (network containers, networks, fixed addresses, DHCP ranges) on NIOS via WAPI.
 
 Paul's POC — Single GM managing the on-prem 10.1.0.0/16 space.
-UDDI manages the full 10.0.0.0/8 as single source of truth.
+NIOS is authoritative for 10.1.0.0/16 only. Azure subnets discovered by UAI.
 Azure 10.2.0.0/16 and 10.3.0.0/16 are discovered by UAI (not managed here).
 
 Required env vars: GM_IP, TF_VAR_windows_admin_password
@@ -38,7 +38,6 @@ if not password:
 # ---------------------------
 
 CONTAINERS = [
-    {"network": "10.0.0.0/8", "comment": "Enterprise address space (UDDI managed)"},
     {"network": "10.1.0.0/16", "comment": "On-prem data center — NIOS managed"},
 ]
 
