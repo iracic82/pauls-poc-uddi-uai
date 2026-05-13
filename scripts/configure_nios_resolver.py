@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
 """
-Configure the Grid Master member's DNS Resolver on NIOS via WAPI.
+Configure the Grid-level DNS Resolver on NIOS via WAPI.
 
 Mirrors Grid Properties Editor > DNS Resolver:
   - Enable DNS Resolver
   - Name Servers (upstream resolvers used by the appliance itself)
   - Search List
+
+The setting is written on the `grid` object so it shows up in the Grid Properties
+Editor and is inherited by all members. Any pre-existing member-level override
+(`use_dns_resolver_setting=true` on the GM) is cleared first so the grid value
+actually takes effect.
 
 Paul's POC — single-GM grid. The resolver must be set BEFORE the GM joins CSP,
 since the CSP hostname is resolved via this resolver.
@@ -103,11 +108,32 @@ def get_member_ref(gm_ip, wapi, host_name):
     return rows[0]["_ref"]
 
 
-def put_member(gm_ip, wapi, ref, payload):
+def put_ref(gm_ip, wapi, ref, payload):
     return requests.put(
         f"https://{gm_ip}/wapi/{wapi}/{ref}",
         auth=(USERNAME, password), json=payload, verify=False, timeout=20,
     )
+
+
+def get_grid_ref(gm_ip, wapi):
+    r = requests.get(
+        f"https://{gm_ip}/wapi/{wapi}/grid",
+        auth=(USERNAME, password), verify=False, timeout=15,
+    )
+    if r.status_code != 200 or not r.json():
+        log(f"GET /grid HTTP {r.status_code}: {r.text[:200]}", ok=False)
+        return None
+    return r.json()[0]["_ref"]
+
+
+def clear_member_override(gm_ip, wapi, member_ref):
+    """Reset member back to inheriting the grid-level resolver setting."""
+    r = put_ref(gm_ip, wapi, member_ref, {"use_dns_resolver_setting": False})
+    if r.status_code == 200:
+        log("Cleared member-level resolver override (inheriting grid)")
+        return True
+    log(f"Could not clear member override — HTTP {r.status_code}: {r.text[:200]}", ok=False)
+    return False
 
 
 # ---------------------------
@@ -132,43 +158,43 @@ def main():
         print("  Cannot connect to GM — skipping\n")
         sys.exit(1)
 
-    ref = get_member_ref(gm_ip, wapi, member_name)
-    if not ref:
+    # --- 1) Clear any existing member-level override so the grid setting wins. ---
+    member_ref = get_member_ref(gm_ip, wapi, member_name)
+    if not member_ref:
         sys.exit(1)
-    log(f"Member ref: {ref}")
+    log(f"Member ref: {member_ref}")
+    clear_member_override(gm_ip, wapi, member_ref)
 
-    # NIOS member uses `use_dns_resolver_setting` (override-grid-default flag),
-    # NOT `enable_dns_resolver` — the GUI "Enable DNS Resolver" checkbox maps to this.
-    payload = {
-        "use_dns_resolver_setting": True,
+    # --- 2) Write the resolver at the grid level (visible in Grid Properties Editor). ---
+    grid_ref = get_grid_ref(gm_ip, wapi)
+    if not grid_ref:
+        sys.exit(1)
+    log(f"Grid ref:   {grid_ref}")
+
+    grid_payload = {
         "dns_resolver_setting": {
             "resolvers": RESOLVERS,
             "search_domains": SEARCH_DOMAINS,
-        },
+        }
     }
-
-    r = put_member(gm_ip, wapi, ref, payload)
-    if r.status_code == 200:
-        log("DNS Resolver configured")
-    else:
-        log(f"PUT failed — HTTP {r.status_code}: {r.text[:400]}", ok=False)
+    r = put_ref(gm_ip, wapi, grid_ref, grid_payload)
+    if r.status_code != 200:
+        log(f"Grid PUT failed — HTTP {r.status_code}: {r.text[:400]}", ok=False)
         sys.exit(1)
+    log("Grid DNS Resolver configured")
 
-    # Read-back verification
+    # --- 3) Read-back verification on grid. ---
     rb = requests.get(
-        f"https://{gm_ip}/wapi/{wapi}/{ref}",
-        params={"_return_fields": "host_name,use_dns_resolver_setting,dns_resolver_setting"},
+        f"https://{gm_ip}/wapi/{wapi}/{grid_ref}",
+        params={"_return_fields": "dns_resolver_setting"},
         auth=(USERNAME, password), verify=False, timeout=15,
     )
     if rb.status_code == 200:
-        data = rb.json()
-        enabled = data.get("use_dns_resolver_setting")
-        setting = data.get("dns_resolver_setting") or {}
-        log(f"Verify: use_dns_resolver_setting={enabled}, "
-            f"resolvers={setting.get('resolvers')}, "
+        setting = (rb.json()[0] if isinstance(rb.json(), list) else rb.json()).get("dns_resolver_setting") or {}
+        log(f"Verify grid: resolvers={setting.get('resolvers')}, "
             f"search_domains={setting.get('search_domains')}")
     else:
-        log(f"Read-back failed — HTTP {rb.status_code}", ok=False)
+        log(f"Grid read-back failed — HTTP {rb.status_code}", ok=False)
 
     print("\n=== Resolver configuration complete ===")
 
