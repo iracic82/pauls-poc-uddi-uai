@@ -137,8 +137,10 @@ def main():
         sys.exit(1)
     log(f"Member ref: {ref}")
 
+    # NIOS member uses `use_dns_resolver_setting` (override-grid-default flag),
+    # NOT `enable_dns_resolver` — the GUI "Enable DNS Resolver" checkbox maps to this.
     payload = {
-        "enable_dns_resolver": True,
+        "use_dns_resolver_setting": True,
         "dns_resolver_setting": {
             "resolvers": RESOLVERS,
             "search_domains": SEARCH_DOMAINS,
@@ -155,14 +157,14 @@ def main():
     # Read-back verification
     rb = requests.get(
         f"https://{gm_ip}/wapi/{wapi}/{ref}",
-        params={"_return_fields": "host_name,enable_dns_resolver,dns_resolver_setting"},
+        params={"_return_fields": "host_name,use_dns_resolver_setting,dns_resolver_setting"},
         auth=(USERNAME, password), verify=False, timeout=15,
     )
     if rb.status_code == 200:
         data = rb.json()
-        enabled = data.get("enable_dns_resolver")
+        enabled = data.get("use_dns_resolver_setting")
         setting = data.get("dns_resolver_setting") or {}
-        log(f"Verify: enable_dns_resolver={enabled}, "
+        log(f"Verify: use_dns_resolver_setting={enabled}, "
             f"resolvers={setting.get('resolvers')}, "
             f"search_domains={setting.get('search_domains')}")
     else:
