@@ -14,13 +14,13 @@ output "fld_vnet_name" {
 }
 
 output "workload_a_subnet_cidr" {
-  description = "CIDR of the workload-a subnet"
-  value       = azurerm_subnet.workload_a.address_prefixes[0]
+  description = "CIDR of the workload-a subnet (first /24 of the FLD block)"
+  value       = cidrsubnet(var.fld_vnet_cidr, 8, 1)
 }
 
 output "workload_b_subnet_cidr" {
-  description = "CIDR of the workload-b subnet"
-  value       = azurerm_subnet.workload_b.address_prefixes[0]
+  description = "CIDR of the workload-b subnet (second /24 of the FLD block)"
+  value       = cidrsubnet(var.fld_vnet_cidr, 8, 2)
 }
 
 output "resource_group_name" {
