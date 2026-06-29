@@ -101,8 +101,8 @@ def create_next_available_fld(
     name: str,
     tag_key: str,
     tag_value: str,
-) -> dict[str, Any]:
-    """Allocate the next available FLD and return the first allocated object."""
+) -> list[dict[str, Any]]:
+    """Allocate the next available FLD(s) and return all allocated objects."""
     body = {
         "count": count,
         "cidr": fld_cidr,
@@ -118,7 +118,7 @@ def create_next_available_fld(
         raise FederationError(
             f"FLD create returned no objects:\n{json.dumps(result, indent=2)}"
         )
-    return fld_objects[0]
+    return fld_objects
 
 
 def write_cidr(path: str, cidr: str) -> None:
@@ -158,19 +158,22 @@ def main(argv: list[str] | None = None) -> int:
             session, args.address, args.cidr, args.tag_key, args.tag_value
         )
         name = f"fld-{args.address.replace('.', '-')}-{args.fld_cidr}-{int(time.time())}"
-        fld = create_next_available_fld(
+        flds = create_next_available_fld(
             session, args.fld_cidr, args.count, name, args.tag_key, args.tag_value
         )
     except FederationError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
 
-    allocated_cidr = f"{fld['address']}/{fld['cidr']}"
+    primary = flds[0]
+    allocated_cidr = f"{primary['address']}/{primary['cidr']}"
 
     print("Matched federated block:")
     print(json.dumps({k: block.get(k) for k in ("id", "address", "cidr", "tags")}, indent=2))
-    print("\nAllocated Forward Looking Delegation:")
-    print(json.dumps({k: fld.get(k) for k in ("id", "name", "address", "cidr", "tags")}, indent=2))
+    print(f"\nAllocated {len(flds)} Forward Looking Delegation(s):")
+    for i, fld in enumerate(flds):
+        note = "  <-- Terraform builds the VNet here" if i == 0 else "  (reserved, stays as FLD)"
+        print(f"  {fld['address']}/{fld['cidr']}  name={fld.get('name')}{note}")
 
     try:
         write_cidr(args.out_file, allocated_cidr)
